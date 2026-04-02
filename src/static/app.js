@@ -19,12 +19,20 @@ document.addEventListener("DOMContentLoaded", () => {
         activityCard.className = "activity-card";
 
         const spotsLeft = details.max_participants - details.participants.length;
+        const participantsList = details.participants
+          .map((participant) => `<span class="participant-item">${participant} <span class="delete-icon" data-activity="${name}" data-email="${participant}">×</span></span>`)
+          .join("");
+
+        const participantsHtml = participantsList
+          ? `<div class="participants-section"><p><strong>Participants:</strong></p><div class="participants-list">${participantsList}</div></div>`
+          : `<div class="participants-section"><p><strong>Participants:</strong> <em>No participants yet.</em></p></div>`;
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          ${participantsHtml}
         `;
 
         activitiesList.appendChild(activityCard);
@@ -73,11 +81,48 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
         messageDiv.classList.add("hidden");
       }, 5000);
+
+      // Refresh activities list
+      fetchActivities();
     } catch (error) {
       messageDiv.textContent = "Failed to sign up. Please try again.";
       messageDiv.className = "error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
+    }
+  });
+
+  // Function to handle delete participant
+  async function deleteParticipant(activityName, email) {
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activityName)}/signup?email=${encodeURIComponent(email)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        // Refresh activities list
+        fetchActivities();
+      } else {
+        const result = await response.json();
+        alert(result.detail || "Failed to unregister participant");
+      }
+    } catch (error) {
+      alert("Failed to unregister participant. Please try again.");
+      console.error("Error unregistering:", error);
+    }
+  }
+
+  // Event listener for delete icons
+  activitiesList.addEventListener("click", (event) => {
+    if (event.target.classList.contains("delete-icon")) {
+      const activityName = event.target.dataset.activity;
+      const email = event.target.dataset.email;
+      if (confirm(`Are you sure you want to unregister ${email} from ${activityName}?`)) {
+        deleteParticipant(activityName, email);
+      }
     }
   });
 
